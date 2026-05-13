@@ -17,6 +17,38 @@ export type Database = {
   };
   public: {
     Tables: {
+      comment_votes: {
+        Row: {
+          comment_id: string;
+          created_at: string;
+          updated_at: string;
+          user_id: string;
+          value: number;
+        };
+        Insert: {
+          comment_id: string;
+          created_at?: string;
+          updated_at?: string;
+          user_id: string;
+          value: number;
+        };
+        Update: {
+          comment_id?: string;
+          created_at?: string;
+          updated_at?: string;
+          user_id?: string;
+          value?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "comment_votes_comment_id_fkey";
+            columns: ["comment_id"];
+            isOneToOne: false;
+            referencedRelation: "topic_comments";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       profiles: {
         Row: {
           archetype_id: string;
@@ -64,6 +96,60 @@ export type Database = {
           wins?: number;
         };
         Relationships: [];
+      };
+      topic_comments: {
+        Row: {
+          archetype_id: string;
+          body: string;
+          created_at: string;
+          id: string;
+          is_deleted: boolean;
+          parent_id: string | null;
+          score: number;
+          topic_id: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          archetype_id: string;
+          body: string;
+          created_at?: string;
+          id?: string;
+          is_deleted?: boolean;
+          parent_id?: string | null;
+          score?: number;
+          topic_id: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          archetype_id?: string;
+          body?: string;
+          created_at?: string;
+          id?: string;
+          is_deleted?: boolean;
+          parent_id?: string | null;
+          score?: number;
+          topic_id?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "topic_comments_parent_id_fkey";
+            columns: ["parent_id"];
+            isOneToOne: false;
+            referencedRelation: "topic_comments";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "topic_comments_topic_id_fkey";
+            columns: ["topic_id"];
+            isOneToOne: false;
+            referencedRelation: "topics";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       topics: {
         Row: {
@@ -168,6 +254,20 @@ export type Database = {
     Functions: {
       handle_is_available: { Args: { p_handle: string }; Returns: boolean };
       handle_is_clean: { Args: { p_handle: string }; Returns: boolean };
+      topic_comments_with_author: {
+        Args: { p_limit?: number; p_sort?: string; p_topic_id: string };
+        Returns: {
+          archetype_id: string;
+          body: string;
+          created_at: string;
+          handle: string;
+          id: string;
+          is_deleted: boolean;
+          parent_id: string;
+          score: number;
+          show_on_profile: boolean;
+        }[];
+      };
       topic_vote_tally: {
         Args: { p_topic_id: string };
         Returns: {
@@ -187,6 +287,8 @@ export type TopicRow = Database["public"]["Tables"]["topics"]["Row"];
 export type TopicInsert = Database["public"]["Tables"]["topics"]["Insert"];
 export type TopicVoteTally =
   Database["public"]["Functions"]["topic_vote_tally"]["Returns"][number];
+export type CommentWithAuthor =
+  Database["public"]["Functions"]["topic_comments_with_author"]["Returns"][number];
 
 // Shape of a source citation inside a topic's left_sources / right_sources /
 // center_sources jsonb arrays. n8n writes these via the ingest endpoint; the
