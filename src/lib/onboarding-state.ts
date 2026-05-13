@@ -31,7 +31,7 @@ export interface OnboardingState {
   showOnProfile: boolean;
 }
 
-export const ONBOARDING_KEY = "commonsquare-onboarding-v3";
+export const ONBOARDING_KEY = "commonsquare-onboarding-v4";
 
 export const initialState: OnboardingState = {
   step: "signup",
