@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { CS } from "@/lib/cs";
 import { CSMark } from "@/components/cs/cs-mark";
 import { useOnboardingState } from "@/lib/onboarding-state";
+import { useSession } from "@/lib/use-session";
 import {
   QUIZ_ORDER,
   LIKERT,
@@ -33,16 +34,17 @@ const AUTO_ADVANCE_MS = 220;
 
 export default function QuizPage() {
   const router = useRouter();
+  const { session, loading } = useSession();
   const { state, setState, hydrated } = useOnboardingState();
   const [i, setI] = useState(0);
   const [transitioning, setTransitioning] = useState(false);
 
-  // Gate access: must have a handle.
+  // Gate access: must be signed in + have claimed a handle.
   useEffect(() => {
-    if (!hydrated) return;
-    if (!state.email) router.replace("/signup");
+    if (loading || !hydrated) return;
+    if (!session) router.replace("/signup");
     else if (!state.handle) router.replace("/username");
-  }, [hydrated, state.email, state.handle, router]);
+  }, [loading, hydrated, session, state.handle, router]);
 
   // Resume at last unanswered (or last index touched).
   useEffect(() => {
@@ -109,7 +111,7 @@ export default function QuizPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [i, state.answers, transitioning]);
 
-  if (!hydrated || !q || !axis) return null;
+  if (loading || !hydrated || !session || !q || !axis) return null;
 
   const progressPct = (answeredCount / QUIZ_ORDER.length) * 100;
 

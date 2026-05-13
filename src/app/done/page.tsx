@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CS } from "@/lib/cs";
 import { CSButton } from "@/components/cs/cs-button";
@@ -8,8 +8,9 @@ import { CSBadge } from "@/components/cs/cs-badge";
 import { CSProcAvatar } from "@/components/cs/cs-proc-avatar";
 import { BadgePill } from "@/components/badges/badge-pill";
 import { OnboardingTopRow } from "@/components/onboarding/top-row";
-import { useOnboardingState } from "@/lib/onboarding-state";
-import { scoreAnswers, pickArchetype } from "@/lib/quiz";
+import { useSession } from "@/lib/use-session";
+import { fetchMyProfile, type ProfileRow } from "@/lib/profile";
+import { CSArchetypes, type ArchetypeId } from "@/lib/archetypes";
 
 function StatTile({
   label,
@@ -73,21 +74,47 @@ function StatTile({
 
 export default function DonePage() {
   const router = useRouter();
-  const { state, hydrated } = useOnboardingState();
+  const { session, loading } = useSession();
+  const [profile, setProfile] = useState<ProfileRow | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(true);
 
   useEffect(() => {
-    if (!hydrated) return;
-    if (!state.email) router.replace("/signup");
-    else if (!state.handle) router.replace("/username");
-    else if (state.answers.some((a) => a == null)) router.replace("/quiz");
-  }, [hydrated, state.email, state.handle, state.answers, router]);
+    if (loading) return;
+    if (!session) {
+      router.replace("/signup");
+      return;
+    }
+    let cancelled = false;
+    fetchMyProfile(session.user.id)
+      .then((p) => {
+        if (cancelled) return;
+        if (!p) {
+          // No profile yet — they need to finish the funnel.
+          router.replace("/results");
+          return;
+        }
+        setProfile(p);
+        setLoadingProfile(false);
+      })
+      .catch((err) => {
+        console.error(err);
+        if (!cancelled) setLoadingProfile(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [loading, session, router]);
 
-  const archetype = useMemo(
-    () => pickArchetype(scoreAnswers(state.answers)),
-    [state.answers],
-  );
+  const archetype = useMemo(() => {
+    if (!profile) return null;
+    return (
+      CSArchetypes.find((a) => a.id === (profile.archetype_id as ArchetypeId)) ??
+      CSArchetypes[0]
+    );
+  }, [profile]);
 
-  if (!hydrated) return null;
+  if (loading || loadingProfile || !session || !profile || !archetype)
+    return null;
 
   return (
     <main className="min-h-screen" style={{ background: CS.paper }}>
@@ -98,7 +125,7 @@ export default function DonePage() {
 
         <div className="mt-8 flex flex-col items-start gap-5 md:items-center">
           <CSProcAvatar
-            seed={state.handle}
+            seed={profile.handle}
             size={84}
             accent={archetype.tint}
           />
@@ -112,9 +139,9 @@ export default function DonePage() {
                 color: CS.ink,
               }}
             >
-              @{state.handle}
+              @{profile.handle}
             </span>
-            {state.showOnProfile ? (
+            {profile.show_on_profile ? (
               <BadgePill arch={archetype} />
             ) : (
               <span
@@ -144,8 +171,16 @@ export default function DonePage() {
         </div>
 
         <div className="mt-10 grid grid-cols-3 gap-3 md:gap-4">
-          <StatTile label="ELO" value="1,200" caption="Starting" />
-          <StatTile label="W–L" value="0–0" caption="No debates yet" />
+          <StatTile
+            label="ELO"
+            value={profile.elo.toLocaleString()}
+            caption="Starting"
+          />
+          <StatTile
+            label="W–L"
+            value={`${profile.wins}–${profile.losses}`}
+            caption="No debates yet"
+          />
           <StatTile label="Rank" value="—" caption="Unranked" />
         </div>
 
@@ -180,7 +215,7 @@ export default function DonePage() {
           >
             We&rsquo;ll email{" "}
             <span style={{ color: CS.violetD, fontWeight: 500 }}>
-              {state.email}
+              {session.user.email ?? profile.email}
             </span>{" "}
             the moment the square opens for matchmaking. Until then, hang
             out in your Lounge — watch debates as they go live, vote on the

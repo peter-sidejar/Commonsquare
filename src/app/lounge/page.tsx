@@ -10,7 +10,14 @@ import { CSProcAvatar } from "@/components/cs/cs-proc-avatar";
 import { CSButton } from "@/components/cs/cs-button";
 import { BadgePill } from "@/components/badges/badge-pill";
 import { useOnboardingState } from "@/lib/onboarding-state";
-import { scoreAnswers, pickArchetype } from "@/lib/quiz";
+import { useSession } from "@/lib/use-session";
+import { getSupabase } from "@/lib/supabase";
+import {
+  fetchMyProfile,
+  updateShowOnProfile,
+  type ProfileRow,
+} from "@/lib/profile";
+import { CSArchetypes, type ArchetypeId } from "@/lib/archetypes";
 
 const NAV_ITEMS: Array<{ label: string; active?: boolean; soon?: boolean }> = [
   { label: "The Lounge", active: true },
@@ -49,13 +56,7 @@ function AxisRow({
         >
           {eyebrow}
         </span>
-        <span
-          className="font-mono"
-          style={{
-            fontSize: 12,
-            color: CS.ink,
-          }}
-        >
+        <span className="font-mono" style={{ fontSize: 12, color: CS.ink }}>
           {value}
         </span>
       </div>
@@ -180,48 +181,23 @@ function EmptyDebates({ handle }: { handle: string }) {
         deltas. Until then your compass holds your spot.
       </p>
       <div className="flex flex-wrap gap-3">
-        <span
-          className="font-mono"
-          style={{
-            padding: "8px 14px",
-            borderRadius: 999,
-            background: CS.violetT,
-            color: CS.violetD,
-            fontSize: 11,
-            letterSpacing: "0.12em",
-            textTransform: "uppercase",
-          }}
-        >
-          Watch · coming soon
-        </span>
-        <span
-          className="font-mono"
-          style={{
-            padding: "8px 14px",
-            borderRadius: 999,
-            background: "rgba(26,24,20,0.05)",
-            color: CS.mute,
-            fontSize: 11,
-            letterSpacing: "0.12em",
-            textTransform: "uppercase",
-          }}
-        >
-          Vote · coming soon
-        </span>
-        <span
-          className="font-mono"
-          style={{
-            padding: "8px 14px",
-            borderRadius: 999,
-            background: "rgba(26,24,20,0.05)",
-            color: CS.mute,
-            fontSize: 11,
-            letterSpacing: "0.12em",
-            textTransform: "uppercase",
-          }}
-        >
-          Debate · coming soon
-        </span>
+        {["Watch", "Vote", "Debate"].map((label) => (
+          <span
+            key={label}
+            className="font-mono"
+            style={{
+              padding: "8px 14px",
+              borderRadius: 999,
+              background: "rgba(26,24,20,0.05)",
+              color: CS.mute,
+              fontSize: 11,
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+            }}
+          >
+            {label} · coming soon
+          </span>
+        ))}
       </div>
     </div>
   );
@@ -229,20 +205,72 @@ function EmptyDebates({ handle }: { handle: string }) {
 
 export default function LoungePage() {
   const router = useRouter();
-  const { state, setState, hydrated } = useOnboardingState();
+  const { session, loading } = useSession();
+  const { state, setState, reset } = useOnboardingState();
+  const [profile, setProfile] = useState<ProfileRow | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(true);
   const [tab, setTab] = useState<"Debates" | "Compass" | "Stats">("Debates");
+  const [togglingPrivacy, setTogglingPrivacy] = useState(false);
 
   useEffect(() => {
-    if (!hydrated) return;
-    if (!state.email) router.replace("/signup");
-    else if (!state.handle) router.replace("/username");
-    else if (state.answers.some((a) => a == null)) router.replace("/quiz");
-  }, [hydrated, state.email, state.handle, state.answers, router]);
+    if (loading) return;
+    if (!session) {
+      router.replace("/signup");
+      return;
+    }
+    let cancelled = false;
+    fetchMyProfile(session.user.id)
+      .then((p) => {
+        if (cancelled) return;
+        if (!p) {
+          router.replace("/results");
+          return;
+        }
+        setProfile(p);
+        setLoadingProfile(false);
+      })
+      .catch((err) => {
+        console.error(err);
+        if (!cancelled) setLoadingProfile(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [loading, session, router]);
 
-  const axes = useMemo(() => scoreAnswers(state.answers), [state.answers]);
-  const archetype = useMemo(() => pickArchetype(axes), [axes]);
+  const archetype = useMemo(() => {
+    if (!profile) return null;
+    return (
+      CSArchetypes.find((a) => a.id === (profile.archetype_id as ArchetypeId)) ??
+      CSArchetypes[0]
+    );
+  }, [profile]);
 
-  if (!hydrated) return null;
+  async function togglePrivacy() {
+    if (!profile || togglingPrivacy) return;
+    const next = !profile.show_on_profile;
+    setTogglingPrivacy(true);
+    setProfile({ ...profile, show_on_profile: next });
+    try {
+      await updateShowOnProfile(profile.user_id, next);
+    } catch (err) {
+      console.error(err);
+      // Revert on failure.
+      setProfile({ ...profile, show_on_profile: !next });
+    } finally {
+      setTogglingPrivacy(false);
+    }
+  }
+
+  async function signOut() {
+    const sb = getSupabase();
+    await sb.auth.signOut();
+    reset();
+    router.replace("/signup");
+  }
+
+  if (loading || loadingProfile || !session || !profile || !archetype)
+    return null;
 
   return (
     <main className="min-h-screen" style={{ background: CS.paper }}>
@@ -308,50 +336,72 @@ export default function LoungePage() {
             </nav>
           </div>
 
-          <div
-            className="flex items-center gap-3 px-2"
-            style={{
-              padding: "10px 12px",
-              borderRadius: 12,
-              background: CS.paper2,
-            }}
-          >
-            <CSProcAvatar
-              seed={state.handle}
-              size={36}
-              accent={archetype.tint}
-            />
-            <div className="min-w-0 flex-1">
-              <div
-                className="font-sans truncate"
-                style={{
-                  fontSize: 13,
-                  fontWeight: 500,
-                  color: CS.ink,
-                  letterSpacing: "-0.01em",
-                }}
-              >
-                @{state.handle}
-              </div>
-              <div
-                className="font-mono truncate"
-                style={{
-                  fontSize: 10,
-                  color: CS.mute,
-                  letterSpacing: "0.12em",
-                  textTransform: "uppercase",
-                }}
-              >
-                {state.showOnProfile ? archetype.short : "Private"}
+          <div className="flex flex-col gap-3">
+            <div
+              className="flex items-center gap-3"
+              style={{
+                padding: "10px 12px",
+                borderRadius: 12,
+                background: CS.paper2,
+              }}
+            >
+              <CSProcAvatar
+                seed={profile.handle}
+                size={36}
+                accent={archetype.tint}
+              />
+              <div className="min-w-0 flex-1">
+                <div
+                  className="font-sans truncate"
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 500,
+                    color: CS.ink,
+                    letterSpacing: "-0.01em",
+                  }}
+                >
+                  @{profile.handle}
+                </div>
+                <div
+                  className="font-mono truncate"
+                  style={{
+                    fontSize: 10,
+                    color: CS.mute,
+                    letterSpacing: "0.12em",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {profile.show_on_profile ? archetype.short : "Private"}
+                </div>
               </div>
             </div>
+            <button
+              type="button"
+              onClick={signOut}
+              className="font-mono"
+              style={{
+                padding: "8px 12px",
+                borderRadius: 999,
+                background: "transparent",
+                border: `1px solid ${CS.rule2}`,
+                color: CS.mute,
+                fontSize: 10,
+                letterSpacing: "0.14em",
+                textTransform: "uppercase",
+                cursor: "pointer",
+                textAlign: "center",
+              }}
+            >
+              Sign out
+            </button>
           </div>
         </aside>
 
         {/* MAIN */}
         <div className="flex flex-col">
           {/* Mobile top bar */}
-          <div className="flex items-center justify-between border-b px-5 py-4 md:hidden"
+          <div
+            className="flex items-center justify-between border-b px-5 py-4 md:hidden"
             style={{ borderColor: CS.rule }}
           >
             <Link href="/" className="inline-flex items-center gap-2.5">
@@ -395,12 +445,14 @@ export default function LoungePage() {
                 textTransform: "uppercase",
               }}
             >
-              The Lounge · @{state.handle}
+              The Lounge · @{profile.handle}
             </span>
             <div className="flex items-center gap-3">
               <button
                 type="button"
-                className="font-sans"
+                onClick={togglePrivacy}
+                disabled={togglingPrivacy}
+                className="font-sans transition-opacity hover:opacity-90 disabled:opacity-50"
                 style={{
                   padding: "8px 14px",
                   borderRadius: 999,
@@ -410,13 +462,15 @@ export default function LoungePage() {
                   fontSize: 13,
                   fontWeight: 500,
                   letterSpacing: "-0.005em",
-                  cursor: "pointer",
+                  cursor: togglingPrivacy ? "not-allowed" : "pointer",
                 }}
               >
-                Share profile
+                {profile.show_on_profile
+                  ? "Profile is public · hide"
+                  : "Profile is private · show"}
               </button>
               <CSButton variant="ink" size="sm">
-                Challenge @{state.handle} →
+                Challenge @{profile.handle} →
               </CSButton>
             </div>
           </div>
@@ -426,7 +480,7 @@ export default function LoungePage() {
             <div className="grid grid-cols-1 items-center gap-8 md:grid-cols-[1fr_auto] md:gap-12">
               <div className="flex items-start gap-5 md:items-center">
                 <CSProcAvatar
-                  seed={state.handle}
+                  seed={profile.handle}
                   size={96}
                   accent={archetype.tint}
                 />
@@ -440,9 +494,9 @@ export default function LoungePage() {
                       color: CS.ink,
                     }}
                   >
-                    @{state.handle}
+                    @{profile.handle}
                   </span>
-                  {state.showOnProfile ? (
+                  {profile.show_on_profile ? (
                     <BadgePill arch={archetype} />
                   ) : (
                     <span
@@ -466,14 +520,22 @@ export default function LoungePage() {
                       textTransform: "uppercase",
                     }}
                   >
-                    Joined just now
+                    Joined {new Date(profile.created_at).toLocaleDateString()}
                   </span>
                 </div>
               </div>
 
               <div className="hidden grid-cols-3 gap-10 md:grid">
-                <StatBlock label="ELO" value="1,200" caption="Starting" />
-                <StatBlock label="W–L" value="0–0" caption="No debates" />
+                <StatBlock
+                  label="ELO"
+                  value={profile.elo.toLocaleString()}
+                  caption="Starting"
+                />
+                <StatBlock
+                  label="W–L"
+                  value={`${profile.wins}–${profile.losses}`}
+                  caption="No debates"
+                />
                 <StatBlock label="Streak" value="—" caption="Open the square" />
               </div>
             </div>
@@ -487,8 +549,16 @@ export default function LoungePage() {
                 border: `1px solid ${CS.rule}`,
               }}
             >
-              <StatBlock label="ELO" value="1,200" caption="Starting" />
-              <StatBlock label="W–L" value="0–0" caption="No debates" />
+              <StatBlock
+                label="ELO"
+                value={profile.elo.toLocaleString()}
+                caption="Starting"
+              />
+              <StatBlock
+                label="W–L"
+                value={`${profile.wins}–${profile.losses}`}
+                caption="No debates"
+              />
               <StatBlock label="Streak" value="—" caption="—" />
             </div>
 
@@ -534,8 +604,8 @@ export default function LoungePage() {
                 <div className="flex justify-center">
                   <CSCompass
                     size={260}
-                    x={axes.e / 100}
-                    y={axes.s / 100}
+                    x={profile.axis_e / 100}
+                    y={profile.axis_s / 100}
                     accent={archetype.tint}
                     showArchetype={false}
                   />
@@ -545,27 +615,28 @@ export default function LoungePage() {
                     eyebrow="Economic"
                     low="Community Investment"
                     high="Free Market"
-                    value={axes.e}
+                    value={profile.axis_e}
                     tint={archetype.tint}
                   />
                   <AxisRow
                     eyebrow="Social"
                     low="Traditional Values"
                     high="Progressive Values"
-                    value={axes.s}
+                    value={profile.axis_s}
                     tint={archetype.tint}
                   />
                   <AxisRow
                     eyebrow="Governance"
                     low="Institutional Trust"
                     high="Individual Liberty"
-                    value={axes.g}
+                    value={profile.axis_g}
                     tint={archetype.tint}
                   />
                   <button
                     type="button"
                     onClick={() => {
-                      // Allow retake — clear answers, send back to quiz.
+                      // Clear local quiz state; the existing profile row is
+                      // upserted when the user re-locks on /results.
                       setState({
                         ...state,
                         answers: Array(state.answers.length).fill(null),
@@ -598,7 +669,7 @@ export default function LoungePage() {
             <div
               className={`${tab === "Debates" ? "block" : "hidden"} mt-7 md:mt-12 md:block`}
             >
-              <EmptyDebates handle={state.handle} />
+              <EmptyDebates handle={profile.handle} />
             </div>
 
             {/* Stats tab (mobile only) */}
@@ -620,20 +691,33 @@ export default function LoungePage() {
                     textTransform: "uppercase",
                   }}
                 >
-                  Waitlist position
-                </span>
-                <span
-                  className="font-mono"
-                  style={{ fontSize: 28, color: CS.ink, fontWeight: 500 }}
-                >
-                  #2,848
+                  Signed in as
                 </span>
                 <span
                   className="font-sans"
-                  style={{ fontSize: 13, color: CS.mute }}
+                  style={{ fontSize: 16, color: CS.ink, fontWeight: 500 }}
                 >
-                  We&rsquo;ll email {state.email} the moment the square opens.
+                  {session.user.email ?? profile.email}
                 </span>
+                <button
+                  type="button"
+                  onClick={signOut}
+                  className="font-mono self-start"
+                  style={{
+                    marginTop: 8,
+                    padding: "8px 14px",
+                    borderRadius: 999,
+                    background: "transparent",
+                    border: `1px solid ${CS.rule2}`,
+                    color: CS.ink,
+                    fontSize: 11,
+                    letterSpacing: "0.14em",
+                    textTransform: "uppercase",
+                    cursor: "pointer",
+                  }}
+                >
+                  Sign out
+                </button>
               </div>
             </div>
           </section>

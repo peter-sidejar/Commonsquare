@@ -7,34 +7,31 @@ import { CSButton } from "@/components/cs/cs-button";
 import { CSBadge } from "@/components/cs/cs-badge";
 import { OnboardingTopRow } from "@/components/onboarding/top-row";
 import { useOnboardingState } from "@/lib/onboarding-state";
+import { useSession } from "@/lib/use-session";
+import { isHandleAvailable } from "@/lib/profile";
 
 const RX = /^[a-z0-9._]{3,18}$/;
-const TAKEN = new Set([
-  "admin",
-  "commonsquare",
-  "mod",
-  "moderator",
-  "support",
-  "marcus",
-  "sarah",
-  "peter",
-  "founder",
-]);
+const SUGGESTIONS = [
+  "arena.aiden",
+  "civic.jules",
+  "vox.morgan",
+  "case_built",
+  "quiet.skeptic",
+];
 
-const SUGGESTIONS = ["arena.aiden", "civic.jules", "vox.morgan", "case_built", "quiet.skeptic"];
-
-type Status = "idle" | "checking" | "available" | "taken" | "invalid";
+type Status = "idle" | "checking" | "available" | "taken" | "invalid" | "error";
 
 export default function UsernamePage() {
   const router = useRouter();
+  const { session, loading } = useSession();
   const { state, setState, hydrated } = useOnboardingState();
   const [handle, setHandle] = useState("");
   const [status, setStatus] = useState<Status>("idle");
 
-  // Redirect back to signup if we don't have an email yet.
+  // Gate: require auth.
   useEffect(() => {
-    if (hydrated && !state.email) router.replace("/signup");
-  }, [hydrated, state.email, router]);
+    if (!loading && !session) router.replace("/signup");
+  }, [loading, session, router]);
 
   // Rehydrate handle from saved state on first paint.
   useEffect(() => {
@@ -42,7 +39,7 @@ export default function UsernamePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated]);
 
-  // Debounced "uniqueness" check (mocked locally).
+  // Debounced uniqueness check against Supabase.
   useEffect(() => {
     if (!handle) {
       setStatus("idle");
@@ -53,17 +50,26 @@ export default function UsernamePage() {
       return;
     }
     setStatus("checking");
-    const t = setTimeout(() => {
-      if (TAKEN.has(handle)) setStatus("taken");
-      else setStatus("available");
-    }, 240);
-    return () => clearTimeout(t);
+    let cancelled = false;
+    const t = window.setTimeout(async () => {
+      try {
+        const available = await isHandleAvailable(handle);
+        if (cancelled) return;
+        setStatus(available ? "available" : "taken");
+      } catch (err) {
+        console.error(err);
+        if (!cancelled) setStatus("error");
+      }
+    }, 260);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t);
+    };
   }, [handle]);
 
   const canSubmit = status === "available";
 
   function onChange(v: string) {
-    // strip everything but allowed chars, lowercase
     const clean = v.toLowerCase().replace(/[^a-z0-9._]/g, "").slice(0, 18);
     setHandle(clean);
   }
@@ -83,10 +89,12 @@ export default function UsernamePage() {
       return { text: "Checking…", color: CS.mute, bg: "rgba(26,24,20,0.05)" };
     if (status === "invalid")
       return { text: "Not valid", color: CS.mute, bg: "rgba(26,24,20,0.05)" };
+    if (status === "error")
+      return { text: "Try again", color: CS.ink, bg: "rgba(26,24,20,0.06)" };
     return null;
   }, [status]);
 
-  if (!hydrated) return null;
+  if (loading || !hydrated || !session) return null;
 
   return (
     <main className="min-h-screen" style={{ background: CS.paper }}>

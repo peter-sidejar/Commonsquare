@@ -9,7 +9,9 @@ import { CSCompass } from "@/components/cs/cs-compass";
 import { BadgeCard } from "@/components/badges/badge-card";
 import { OnboardingTopRow } from "@/components/onboarding/top-row";
 import { useOnboardingState } from "@/lib/onboarding-state";
+import { useSession } from "@/lib/use-session";
 import { scoreAnswers, pickArchetype } from "@/lib/quiz";
+import { insertProfile, isHandleAvailable } from "@/lib/profile";
 
 type AxisRow = {
   label: string;
@@ -153,15 +155,18 @@ function PrivacyToggle({
 
 export default function ResultsPage() {
   const router = useRouter();
+  const { session, loading } = useSession();
   const { state, setState, hydrated } = useOnboardingState();
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Gate access.
   useEffect(() => {
-    if (!hydrated) return;
-    if (!state.email) router.replace("/signup");
+    if (loading || !hydrated) return;
+    if (!session) router.replace("/signup");
     else if (!state.handle) router.replace("/username");
     else if (state.answers.some((a) => a == null)) router.replace("/quiz");
-  }, [hydrated, state.email, state.handle, state.answers, router]);
+  }, [loading, hydrated, session, state.handle, state.answers, router]);
 
   const axes = useMemo(() => scoreAnswers(state.answers), [state.answers]);
   const archetype = useMemo(() => pickArchetype(axes), [axes]);
@@ -176,12 +181,45 @@ export default function ResultsPage() {
     setState({ ...state, showOnProfile: v });
   }
 
-  function lockIn() {
-    setState({ ...state, showOnProfile, step: "locked" });
-    router.push("/done");
+  async function lockIn() {
+    if (!session?.user) return;
+    setError(null);
+    setSubmitting(true);
+    try {
+      // Final guard: someone could have claimed this handle while the
+      // user was taking the quiz. Re-check before we INSERT.
+      const stillAvailable = await isHandleAvailable(state.handle);
+      if (!stillAvailable) {
+        setError(
+          `Looks like @${state.handle} just got claimed. Pick another handle?`,
+        );
+        setSubmitting(false);
+        return;
+      }
+      await insertProfile({
+        userId: session.user.id,
+        email: session.user.email ?? "",
+        handle: state.handle,
+        axisE: axes.e,
+        axisS: axes.s,
+        axisG: axes.g,
+        archetypeId: archetype.id,
+        showOnProfile,
+      });
+      setState({ ...state, showOnProfile, step: "locked" });
+      router.push("/done");
+    } catch (err) {
+      console.error(err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Couldn't save your profile. Try again in a moment.",
+      );
+      setSubmitting(false);
+    }
   }
 
-  if (!hydrated) return null;
+  if (loading || !hydrated || !session) return null;
 
   const rows: AxisRow[] = [
     {
@@ -303,27 +341,71 @@ export default function ResultsPage() {
 
       {/* Footer band — desktop */}
       <section
-        className="mt-16 hidden items-center justify-between gap-8 px-10 py-7 md:flex"
+        className="mt-16 hidden flex-col gap-4 px-10 py-7 md:flex"
         style={{
           borderTop: `1px solid ${CS.rule}`,
           background: CS.paper2,
         }}
       >
-        <PrivacyToggle on={showOnProfile} onChange={togglePrivacy} />
-        <CSButton variant="primary" size="lg" onClick={lockIn}>
-          Lock in my profile →
-        </CSButton>
+        <div className="flex items-center justify-between gap-8">
+          <PrivacyToggle on={showOnProfile} onChange={togglePrivacy} />
+          <CSButton
+            variant="primary"
+            size="lg"
+            onClick={lockIn}
+            disabled={submitting}
+          >
+            {submitting ? "Saving…" : "Lock in my profile →"}
+          </CSButton>
+        </div>
+        {error ? (
+          <p
+            className="font-sans"
+            style={{
+              margin: 0,
+              fontSize: 13,
+              lineHeight: 1.55,
+              color: CS.ink,
+              background: "rgba(26,24,20,0.06)",
+              padding: "10px 12px",
+              borderRadius: 10,
+            }}
+          >
+            {error}
+          </p>
+        ) : null}
       </section>
 
       {/* Footer band — mobile sticky */}
       <div
-        className="fixed bottom-0 left-0 right-0 flex flex-col gap-4 px-6 py-4 md:hidden"
+        className="fixed bottom-0 left-0 right-0 flex flex-col gap-3 px-6 py-4 md:hidden"
         style={{ background: CS.paper, borderTop: `1px solid ${CS.rule2}` }}
       >
         <PrivacyToggle on={showOnProfile} onChange={togglePrivacy} />
-        <CSButton variant="primary" size="lg" onClick={lockIn}>
-          Lock in my profile →
+        <CSButton
+          variant="primary"
+          size="lg"
+          onClick={lockIn}
+          disabled={submitting}
+        >
+          {submitting ? "Saving…" : "Lock in my profile →"}
         </CSButton>
+        {error ? (
+          <p
+            className="font-sans"
+            style={{
+              margin: 0,
+              fontSize: 13,
+              lineHeight: 1.45,
+              color: CS.ink,
+              background: "rgba(26,24,20,0.06)",
+              padding: "8px 12px",
+              borderRadius: 10,
+            }}
+          >
+            {error}
+          </p>
+        ) : null}
       </div>
     </main>
   );

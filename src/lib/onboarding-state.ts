@@ -1,10 +1,6 @@
-// Onboarding state persisted to localStorage. Mirror of the prototype's
-// state shape so we can rehydrate a partial quiz across reloads. In
-// production, mirror to the user row in Postgres keyed by user ID.
-//
-// TODO(auth): once Supabase Auth is wired in, stop persisting `email` to
-// localStorage. The email should come from the session and only a
-// non-PII identifier (user id) should live in localStorage.
+// Onboarding state persisted to localStorage. Holds non-PII fields only
+// — the user's email is read from the Supabase session, never stored
+// here. Used to rehydrate a partial quiz across reloads.
 
 "use client";
 
@@ -29,18 +25,16 @@ const STEP_VALUES: readonly OnboardingStep[] = [
 
 export interface OnboardingState {
   step: OnboardingStep;
-  email: string;
   handle: string;
   quizIndex: number;
   answers: Answers;
   showOnProfile: boolean;
 }
 
-export const ONBOARDING_KEY = "commonsquare-onboarding-v1";
+export const ONBOARDING_KEY = "commonsquare-onboarding-v2";
 
 export const initialState: OnboardingState = {
   step: "signup",
-  email: "",
   handle: "",
   quizIndex: 0,
   answers: Array(QUIZ_ORDER.length).fill(null),
@@ -61,7 +55,6 @@ function sanitize(raw: unknown): OnboardingState {
       ? (p.step as OnboardingStep)
       : initialState.step;
 
-  const email = typeof p.email === "string" ? p.email : initialState.email;
   const handle = typeof p.handle === "string" ? p.handle : initialState.handle;
 
   const expectedLen = initialState.answers.length;
@@ -86,7 +79,7 @@ function sanitize(raw: unknown): OnboardingState {
       ? p.showOnProfile
       : initialState.showOnProfile;
 
-  return { step, email, handle, quizIndex, answers, showOnProfile };
+  return { step, handle, quizIndex, answers, showOnProfile };
 }
 
 export function loadState(): OnboardingState | null {
