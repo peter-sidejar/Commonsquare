@@ -209,6 +209,8 @@ export default function LoungePage() {
   const { state, setState, reset } = useOnboardingState();
   const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [retryNonce, setRetryNonce] = useState(0);
   const [tab, setTab] = useState<"Debates" | "Compass" | "Stats">("Debates");
   const [togglingPrivacy, setTogglingPrivacy] = useState(false);
 
@@ -219,6 +221,8 @@ export default function LoungePage() {
       return;
     }
     let cancelled = false;
+    setProfileError(null);
+    setLoadingProfile(true);
     fetchMyProfile(session.user.id)
       .then((p) => {
         if (cancelled) return;
@@ -227,16 +231,23 @@ export default function LoungePage() {
           return;
         }
         setProfile(p);
-        setLoadingProfile(false);
       })
       .catch((err) => {
         console.error(err);
+        if (!cancelled)
+          setProfileError(
+            err instanceof Error
+              ? err.message
+              : "Couldn't load your profile.",
+          );
+      })
+      .finally(() => {
         if (!cancelled) setLoadingProfile(false);
       });
     return () => {
       cancelled = true;
     };
-  }, [loading, session, router]);
+  }, [loading, session, router, retryNonce]);
 
   const archetype = useMemo(() => {
     if (!profile) return null;
@@ -269,8 +280,58 @@ export default function LoungePage() {
     router.replace("/signup");
   }
 
-  if (loading || loadingProfile || !session || !profile || !archetype)
-    return null;
+  if (loading || (loadingProfile && !profileError)) return null;
+
+  if (profileError) {
+    return (
+      <main
+        className="flex min-h-screen flex-col items-center justify-center px-6"
+        style={{ background: CS.paper }}
+      >
+        <div className="flex flex-col items-center gap-5 text-center">
+          <CSMark size={36} />
+          <h1
+            className="font-sans"
+            style={{
+              margin: 0,
+              fontSize: 24,
+              fontWeight: 500,
+              letterSpacing: "-0.025em",
+              color: CS.ink,
+            }}
+          >
+            Lounge is having trouble loading.
+          </h1>
+          <p
+            className="font-sans"
+            style={{
+              margin: 0,
+              maxWidth: 380,
+              fontSize: 14,
+              lineHeight: 1.55,
+              color: CS.mute,
+            }}
+          >
+            {profileError}
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <CSButton
+              variant="primary"
+              size="md"
+              onClick={() => setRetryNonce((n) => n + 1)}
+            >
+              Try again →
+            </CSButton>
+            <CSButton variant="ghost" size="md" onClick={signOut}>
+              Sign out
+            </CSButton>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  if (!session || !profile || !archetype) return null;
 
   return (
     <main className="min-h-screen" style={{ background: CS.paper }}>

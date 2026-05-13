@@ -19,12 +19,14 @@ export async function fetchMyProfile(userId: string): Promise<ProfileRow | null>
 }
 
 // Lookup any public profile by handle (for shareable profile URLs later).
+// Uses exact case-insensitive match (not .ilike, which would treat `_` and
+// `%` in the input as SQL wildcards — handles can legitimately contain `_`).
 export async function fetchProfileByHandle(handle: string): Promise<ProfileRow | null> {
   const sb = getSupabase();
   const { data, error } = await sb
     .from("profiles")
     .select("*")
-    .ilike("handle", handle)
+    .eq("handle", handle.toLowerCase())
     .maybeSingle();
   if (error) throw error;
   return data ?? null;

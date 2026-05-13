@@ -19,11 +19,22 @@ export function useSession(): UseSessionResult {
     const sb = getSupabase();
     let mounted = true;
 
-    sb.auth.getSession().then(({ data }) => {
-      if (!mounted) return;
-      setSession(data.session);
-      setLoading(false);
-    });
+    sb.auth
+      .getSession()
+      .then(({ data }) => {
+        if (!mounted) return;
+        setSession(data.session);
+      })
+      .catch((err) => {
+        // Network blip or initialization failure — don't trap the page in a
+        // permanent loading state. Treat as "no session".
+        console.error("getSession failed", err);
+        if (!mounted) return;
+        setSession(null);
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
 
     const { data: sub } = sb.auth.onAuthStateChange((_event, s) => {
       if (!mounted) return;

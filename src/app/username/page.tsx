@@ -155,13 +155,18 @@ export default function UsernamePage() {
           >
             @
           </span>
+          <label htmlFor="handle-input" className="sr-only">
+            Handle
+          </label>
           <input
+            id="handle-input"
             type="text"
             inputMode="text"
             autoComplete="off"
             autoFocus
             spellCheck={false}
             placeholder="your_handle"
+            aria-describedby="handle-rules"
             value={handle}
             onChange={(e) => onChange(e.target.value)}
             onKeyDown={(e) => {
@@ -202,6 +207,7 @@ export default function UsernamePage() {
         </div>
 
         <p
+          id="handle-rules"
           className="font-mono"
           style={{
             margin: "10px 0 0",

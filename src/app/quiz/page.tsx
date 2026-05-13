@@ -82,10 +82,12 @@ export default function QuizPage() {
   }
 
   function goBack() {
+    if (transitioning) return;
     if (i > 0) setI(i - 1);
   }
 
   function goNext() {
+    if (transitioning) return;
     if (current == null) return;
     if (i >= QUIZ_ORDER.length - 1) {
       setState({ ...state, step: "results" });

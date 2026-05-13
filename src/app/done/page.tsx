@@ -3,12 +3,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CS } from "@/lib/cs";
+import { CSMark } from "@/components/cs/cs-mark";
 import { CSButton } from "@/components/cs/cs-button";
 import { CSBadge } from "@/components/cs/cs-badge";
 import { CSProcAvatar } from "@/components/cs/cs-proc-avatar";
 import { BadgePill } from "@/components/badges/badge-pill";
 import { OnboardingTopRow } from "@/components/onboarding/top-row";
 import { useSession } from "@/lib/use-session";
+import { getSupabase } from "@/lib/supabase";
 import { fetchMyProfile, type ProfileRow } from "@/lib/profile";
 import { CSArchetypes, type ArchetypeId } from "@/lib/archetypes";
 
@@ -77,6 +79,8 @@ export default function DonePage() {
   const { session, loading } = useSession();
   const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [retryNonce, setRetryNonce] = useState(0);
 
   useEffect(() => {
     if (loading) return;
@@ -85,6 +89,8 @@ export default function DonePage() {
       return;
     }
     let cancelled = false;
+    setError(null);
+    setLoadingProfile(true);
     fetchMyProfile(session.user.id)
       .then((p) => {
         if (cancelled) return;
@@ -94,16 +100,23 @@ export default function DonePage() {
           return;
         }
         setProfile(p);
-        setLoadingProfile(false);
       })
       .catch((err) => {
         console.error(err);
+        if (!cancelled)
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Couldn't load your profile.",
+          );
+      })
+      .finally(() => {
         if (!cancelled) setLoadingProfile(false);
       });
     return () => {
       cancelled = true;
     };
-  }, [loading, session, router]);
+  }, [loading, session, router, retryNonce]);
 
   const archetype = useMemo(() => {
     if (!profile) return null;
@@ -113,8 +126,63 @@ export default function DonePage() {
     );
   }, [profile]);
 
-  if (loading || loadingProfile || !session || !profile || !archetype)
-    return null;
+  async function signOutAndRestart() {
+    await getSupabase().auth.signOut();
+    router.replace("/signup");
+  }
+
+  if (loading || (loadingProfile && !error)) return null;
+
+  if (error) {
+    return (
+      <main
+        className="flex min-h-screen flex-col items-center justify-center px-6"
+        style={{ background: CS.paper }}
+      >
+        <div className="flex flex-col items-center gap-5 text-center">
+          <CSMark size={36} />
+          <h1
+            className="font-sans"
+            style={{
+              margin: 0,
+              fontSize: 24,
+              fontWeight: 500,
+              letterSpacing: "-0.025em",
+              color: CS.ink,
+            }}
+          >
+            Couldn&rsquo;t load your profile.
+          </h1>
+          <p
+            className="font-sans"
+            style={{
+              margin: 0,
+              maxWidth: 380,
+              fontSize: 14,
+              lineHeight: 1.55,
+              color: CS.mute,
+            }}
+          >
+            {error}
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <CSButton
+              variant="primary"
+              size="md"
+              onClick={() => setRetryNonce((n) => n + 1)}
+            >
+              Try again →
+            </CSButton>
+            <CSButton variant="ghost" size="md" onClick={signOutAndRestart}>
+              Sign out
+            </CSButton>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  if (!session || !profile || !archetype) return null;
 
   return (
     <main className="min-h-screen" style={{ background: CS.paper }}>

@@ -10,9 +10,20 @@ interface CSButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   size?: Size;
 }
 
+const BASE_CLASS =
+  "font-sans transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed";
+
 export const CSButton = forwardRef<HTMLButtonElement, CSButtonProps>(
   function CSButton(
-    { children, variant = "primary", size = "md", style, ...rest },
+    {
+      children,
+      variant = "primary",
+      size = "md",
+      style,
+      className,
+      type = "button",
+      ...rest
+    },
     ref,
   ) {
     const sizeStyle =
@@ -42,7 +53,8 @@ export const CSButton = forwardRef<HTMLButtonElement, CSButtonProps>(
     return (
       <button
         ref={ref}
-        className="font-sans transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+        type={type}
+        className={className ? `${BASE_CLASS} ${className}` : BASE_CLASS}
         style={{
           ...variantStyle,
           ...sizeStyle,
