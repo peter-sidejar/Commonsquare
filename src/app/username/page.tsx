@@ -72,10 +72,19 @@ export default function UsernamePage() {
   function onChange(v: string) {
     const clean = v.toLowerCase().replace(/[^a-z0-9._]/g, "").slice(0, 18);
     setHandle(clean);
+    // Reset status synchronously so canSubmit doesn't lag a render behind
+    // the input value (paste+Enter races used to slip a stale "available"
+    // through). The debounced effect below will re-check via the RPC.
+    if (!clean) setStatus("idle");
+    else if (!RX.test(clean)) setStatus("invalid");
+    else setStatus("checking");
   }
 
   function claim() {
-    if (!canSubmit) return;
+    // Defense in depth: re-validate the regex on submit. canSubmit may be
+    // true for a microscopic window after onChange but before status
+    // settles, so don't trust it alone.
+    if (!canSubmit || !RX.test(handle)) return;
     setState({ ...state, handle, step: "quiz" });
     router.push("/quiz");
   }
