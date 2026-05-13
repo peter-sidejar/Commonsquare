@@ -9,6 +9,7 @@ import { OnboardingTopRow } from "@/components/onboarding/top-row";
 import { useOnboardingState } from "@/lib/onboarding-state";
 import { useSession } from "@/lib/use-session";
 import { isHandleAvailable } from "@/lib/profile";
+import { checkHandle } from "@/lib/handle-validation";
 
 const RX = /^[a-z0-9._]{3,18}$/;
 const SUGGESTIONS = [
@@ -19,7 +20,14 @@ const SUGGESTIONS = [
   "quiet.skeptic",
 ];
 
-type Status = "idle" | "checking" | "available" | "taken" | "invalid" | "error";
+type Status =
+  | "idle"
+  | "checking"
+  | "available"
+  | "taken"
+  | "invalid"
+  | "blocked"
+  | "error";
 
 export default function UsernamePage() {
   const router = useRouter();
@@ -39,7 +47,10 @@ export default function UsernamePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated]);
 
-  // Debounced uniqueness check against Supabase.
+  // Debounced uniqueness check against Supabase. Cleanliness (profanity /
+  // reserved-word) is checked synchronously below in onChange so we never
+  // round-trip a blocked handle to the server, but the DB has its own CHECK
+  // constraint so this is just UX.
   useEffect(() => {
     if (!handle) {
       setStatus("idle");
@@ -47,6 +58,11 @@ export default function UsernamePage() {
     }
     if (!RX.test(handle)) {
       setStatus("invalid");
+      return;
+    }
+    const verdict = checkHandle(handle);
+    if (!verdict.ok) {
+      setStatus("blocked");
       return;
     }
     setStatus("checking");
@@ -75,16 +91,22 @@ export default function UsernamePage() {
     // Reset status synchronously so canSubmit doesn't lag a render behind
     // the input value (paste+Enter races used to slip a stale "available"
     // through). The debounced effect below will re-check via the RPC.
-    if (!clean) setStatus("idle");
-    else if (!RX.test(clean)) setStatus("invalid");
-    else setStatus("checking");
+    if (!clean) {
+      setStatus("idle");
+    } else if (!RX.test(clean)) {
+      setStatus("invalid");
+    } else if (!checkHandle(clean).ok) {
+      setStatus("blocked");
+    } else {
+      setStatus("checking");
+    }
   }
 
   function claim() {
-    // Defense in depth: re-validate the regex on submit. canSubmit may be
-    // true for a microscopic window after onChange but before status
-    // settles, so don't trust it alone.
-    if (!canSubmit || !RX.test(handle)) return;
+    // Defense in depth: re-validate regex + cleanliness on submit. canSubmit
+    // can briefly be true after onChange but before status settles, so don't
+    // trust it alone. The DB also has a CHECK constraint as a final guard.
+    if (!canSubmit || !RX.test(handle) || !checkHandle(handle).ok) return;
     setState({ ...state, handle, step: "quiz" });
     router.push("/quiz");
   }
@@ -98,6 +120,8 @@ export default function UsernamePage() {
       return { text: "Checking…", color: CS.mute, bg: "rgba(26,24,20,0.05)" };
     if (status === "invalid")
       return { text: "Not valid", color: CS.mute, bg: "rgba(26,24,20,0.05)" };
+    if (status === "blocked")
+      return { text: "Not allowed", color: CS.ink, bg: "rgba(26,24,20,0.06)" };
     if (status === "error")
       return { text: "Try again", color: CS.ink, bg: "rgba(26,24,20,0.06)" };
     return null;
