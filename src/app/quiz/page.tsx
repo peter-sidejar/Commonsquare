@@ -220,6 +220,21 @@ export default function QuizPage() {
         >
           {q.text}
         </h1>
+        {q.explainer ? (
+          <p
+            className="font-sans"
+            style={{
+              margin: "16px 0 0",
+              maxWidth: 700,
+              fontSize: 14,
+              lineHeight: 1.5,
+              color: CS.mute,
+              letterSpacing: "-0.005em",
+            }}
+          >
+            {q.explainer}
+          </p>
+        ) : null}
 
         <div className="mt-10 flex flex-col gap-2 md:mt-12 md:flex-row md:gap-3">
           {LIKERT.map((opt, idx) => {

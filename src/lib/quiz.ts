@@ -10,44 +10,50 @@ export interface Question {
   axis: Axis;
   dir: 1 | -1;
   text: string;
+  // Optional one-line context shown under the question. Use sparingly — only
+  // when a real share of users wouldn't recognize the term. Don't editorialize.
+  explainer?: string;
 }
 
+// Rewritten 2026-05-13: every question now asks about a belief or value
+// directly rather than asking about a delta from current policy. No jargon
+// without an explainer, no "more / less than today" phrasing.
 export const QUESTIONS: Question[] = [
   // ECONOMIC (Community Investment ←low | high→ Free Market)
-  { axis: "e", dir: +1, text: "Markets generally produce fairer outcomes than government programs." },
-  { axis: "e", dir: -1, text: "Public goods like transit and broadband are usually better delivered when government leads investment than when the private market does." },
-  { axis: "e", dir: -1, text: "Taxes on the wealthy should be raised to fund public services." },
-  { axis: "e", dir: +1, text: "Most economic problems are best solved by reducing regulation." },
-  { axis: "e", dir: -1, text: "Universal healthcare is something markets cannot reliably provide on their own." },
-  { axis: "e", dir: +1, text: "Free trade between countries usually creates more winners than losers." },
-  { axis: "e", dir: -1, text: "Worker unions are essential to balance corporate power." },
-  { axis: "e", dir: +1, text: "Minimum wage laws hurt more workers than they help in the long run." },
-  { axis: "e", dir: -1, text: "Antitrust enforcement should be substantially more aggressive than it is today." },
-  { axis: "e", dir: +1, text: "Government spending tends to crowd out productive private investment." },
+  { axis: "e", dir: +1, text: "A free market produces better results than a government-planned economy." },
+  { axis: "e", dir: -1, text: "Things like roads, transit, and internet access should be run by the government, not private companies." },
+  { axis: "e", dir: -1, text: "It's fair for the wealthy to pay a much higher rate of tax than everyone else." },
+  { axis: "e", dir: +1, text: "Businesses do their best work when government rules stay out of the way." },
+  { axis: "e", dir: -1, text: "Healthcare is a basic right, and the government should make sure everyone has it." },
+  { axis: "e", dir: +1, text: "Open trade between countries makes everyone better off in the long run." },
+  { axis: "e", dir: -1, text: "Workers need unions to stand up to big companies." },
+  { axis: "e", dir: +1, text: "A high minimum wage ends up costing more jobs than it lifts people out of poverty." },
+  { axis: "e", dir: -1, text: "When a few companies dominate an industry, the government should step in to break them up.", explainer: "Like if one company controlled most of the search, social media, or grocery market." },
+  { axis: "e", dir: +1, text: "The bigger the government's role in the economy, the worse the economy does overall." },
 
   // SOCIAL (Traditional ←low | high→ Progressive)
-  { axis: "s", dir: -1, text: "Society benefits when traditional institutions are preserved and respected." },
-  { axis: "s", dir: +1, text: "We should expand civil rights protections for marginalized communities." },
-  { axis: "s", dir: -1, text: "Religious traditions still offer the best foundation for moral life." },
-  { axis: "s", dir: +1, text: "Schools should reflect a diversity of cultures and identities." },
-  { axis: "s", dir: -1, text: "Family structures rooted in marriage are crucial to social stability." },
-  { axis: "s", dir: +1, text: "Drug laws should be relaxed and addiction treated as a health issue." },
-  { axis: "s", dir: -1, text: "Immigration policy should prioritize cultural and language assimilation." },
-  { axis: "s", dir: +1, text: "People are entitled to define their own gender identity." },
-  { axis: "s", dir: -1, text: "Older generations have wisdom that has been lost in modern culture." },
-  { axis: "s", dir: +1, text: "Society should actively work to undo historical inequities." },
+  { axis: "s", dir: -1, text: "Traditional values and institutions are worth holding onto." },
+  { axis: "s", dir: +1, text: "Marginalized groups deserve stronger legal protections.", explainer: "Groups that have historically faced discrimination — by race, ethnicity, gender, sexuality, disability, etc." },
+  { axis: "s", dir: -1, text: "Religion and faith still provide the strongest foundation for a moral life." },
+  { axis: "s", dir: +1, text: "Schools should teach kids about a wide range of cultures and identities." },
+  { axis: "s", dir: -1, text: "Marriage and the traditional family are the foundation of a stable society." },
+  { axis: "s", dir: +1, text: "Drug addiction is a health issue, not a crime." },
+  { axis: "s", dir: -1, text: "Immigrants should be expected to adopt the language and customs of their new country." },
+  { axis: "s", dir: +1, text: "People should be free to define their own gender identity." },
+  { axis: "s", dir: -1, text: "Older generations had more wisdom about life than today's culture gives them credit for." },
+  { axis: "s", dir: +1, text: "Society has a real duty to repair the harms of historical injustices." },
 
   // GOVERNANCE (Institutional Trust ←low | high→ Individual Liberty)
-  { axis: "g", dir: +1, text: "Citizens are usually better judges of their own interests than government experts." },
-  { axis: "g", dir: -1, text: "Strong, well-funded public institutions are essential to a functioning society." },
-  { axis: "g", dir: -1, text: "Government surveillance is justified when it meaningfully improves public safety." },
-  { axis: "g", dir: +1, text: "Mandatory vaccination policies overreach into personal liberty." },
-  { axis: "g", dir: -1, text: "Major decisions are better made by elected representatives than by direct popular vote." },
-  { axis: "g", dir: +1, text: "People should be free to make choices even if society judges them harmful." },
-  { axis: "g", dir: -1, text: "Public agencies and experts deserve more trust than they currently receive." },
-  { axis: "g", dir: +1, text: "Gun ownership is a fundamental right that should face minimal restrictions." },
-  { axis: "g", dir: +1, text: "The federal government's role should be substantially smaller than it is today." },
-  { axis: "g", dir: -1, text: "Long-standing institutions tend to know more than they appear to from the outside." },
+  { axis: "g", dir: +1, text: "Regular people usually know what's best for themselves better than government experts do." },
+  { axis: "g", dir: -1, text: "A functioning society needs strong, well-funded public institutions.", explainer: "Public schools, courts, the post office, regulatory agencies, parks, and so on." },
+  { axis: "g", dir: -1, text: "Some loss of privacy is worth it if it makes the public safer.", explainer: "Things like cameras in public spaces, online monitoring, or airport screening." },
+  { axis: "g", dir: +1, text: "Decisions like whether to get a vaccine should be up to the individual, not the government." },
+  { axis: "g", dir: -1, text: "Big national decisions should be made by elected leaders, not by direct popular vote." },
+  { axis: "g", dir: +1, text: "People should be free to make their own choices even when others think they're harmful." },
+  { axis: "g", dir: -1, text: "When scientists and government experts give advice, people should generally trust them." },
+  { axis: "g", dir: +1, text: "The right to own a gun is a basic personal freedom." },
+  { axis: "g", dir: +1, text: "The federal government has too much say in everyday life." },
+  { axis: "g", dir: -1, text: "Institutions like courts, the press, and government agencies usually do their jobs well." },
 ];
 
 function shuffleSeeded<T>(arr: T[], seed: number): T[] {
