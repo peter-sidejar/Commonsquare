@@ -65,12 +65,136 @@ export type Database = {
         };
         Relationships: [];
       };
+      topics: {
+        Row: {
+          background: string;
+          center_sources: Json;
+          created_at: string;
+          debate_question: string;
+          id: string;
+          left_sources: Json;
+          left_summary: string;
+          og_image_url: string | null;
+          primary_axis: string;
+          published_at: string;
+          right_sources: Json;
+          right_summary: string;
+          slug: string;
+          status: string;
+          tags: string[];
+          title: string;
+          updated_at: string;
+        };
+        Insert: {
+          background: string;
+          center_sources?: Json;
+          created_at?: string;
+          debate_question: string;
+          id?: string;
+          left_sources?: Json;
+          left_summary: string;
+          og_image_url?: string | null;
+          primary_axis?: string;
+          published_at?: string;
+          right_sources?: Json;
+          right_summary: string;
+          slug: string;
+          status?: string;
+          tags?: string[];
+          title: string;
+          updated_at?: string;
+        };
+        Update: {
+          background?: string;
+          center_sources?: Json;
+          created_at?: string;
+          debate_question?: string;
+          id?: string;
+          left_sources?: Json;
+          left_summary?: string;
+          og_image_url?: string | null;
+          primary_axis?: string;
+          published_at?: string;
+          right_sources?: Json;
+          right_summary?: string;
+          slug?: string;
+          status?: string;
+          tags?: string[];
+          title?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      topic_votes: {
+        Row: {
+          archetype_id: string;
+          created_at: string;
+          id: string;
+          topic_id: string;
+          updated_at: string;
+          user_id: string;
+          vote: string;
+        };
+        Insert: {
+          archetype_id: string;
+          created_at?: string;
+          id?: string;
+          topic_id: string;
+          updated_at?: string;
+          user_id: string;
+          vote: string;
+        };
+        Update: {
+          archetype_id?: string;
+          created_at?: string;
+          id?: string;
+          topic_id?: string;
+          updated_at?: string;
+          user_id?: string;
+          vote?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "topic_votes_topic_id_fkey";
+            columns: ["topic_id"];
+            isOneToOne: false;
+            referencedRelation: "topics";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: { [_ in never]: never };
     Functions: {
       handle_is_available: { Args: { p_handle: string }; Returns: boolean };
+      handle_is_clean: { Args: { p_handle: string }; Returns: boolean };
+      topic_vote_tally: {
+        Args: { p_topic_id: string };
+        Returns: {
+          no_by_archetype: Json;
+          no_total: number;
+          yes_by_archetype: Json;
+          yes_total: number;
+        }[];
+      };
     };
     Enums: { [_ in never]: never };
     CompositeTypes: { [_ in never]: never };
   };
 };
+
+export type TopicRow = Database["public"]["Tables"]["topics"]["Row"];
+export type TopicInsert = Database["public"]["Tables"]["topics"]["Insert"];
+export type TopicVoteTally =
+  Database["public"]["Functions"]["topic_vote_tally"]["Returns"][number];
+
+// Shape of a source citation inside a topic's left_sources / right_sources /
+// center_sources jsonb arrays. n8n writes these via the ingest endpoint; the
+// page renders them as source cards.
+export interface TopicSource {
+  outlet: string;
+  title: string;
+  url: string;
+  bias_label: string; // "Left" | "Lean Left" | "Center" | "Lean Right" | "Right"
+  excerpt?: string;
+}

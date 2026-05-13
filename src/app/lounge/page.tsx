@@ -9,6 +9,7 @@ import { CSCompass } from "@/components/cs/cs-compass";
 import { CSProcAvatar } from "@/components/cs/cs-proc-avatar";
 import { CSButton } from "@/components/cs/cs-button";
 import { BadgePill } from "@/components/badges/badge-pill";
+import { TodayTopicTile } from "@/components/lounge/today-topic-tile";
 import { useOnboardingState } from "@/lib/onboarding-state";
 import { useSession } from "@/lib/use-session";
 import { getSupabase } from "@/lib/supabase";
@@ -621,6 +622,11 @@ export default function LoungePage() {
                 caption="No debates"
               />
               <StatBlock label="Streak" value="—" caption="—" />
+            </div>
+
+            {/* Today's Topic tile */}
+            <div className="mt-7 md:mt-10">
+              <TodayTopicTile userId={profile.user_id} />
             </div>
 
             {/* Mobile tab strip */}

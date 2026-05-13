@@ -5,6 +5,7 @@ import { LandingBridge } from "@/components/landing/bridge";
 import { LandingHow } from "@/components/landing/how";
 import { LandingCompass } from "@/components/landing/compass-section";
 import { LandingDebate } from "@/components/landing/debate-preview";
+import { LandingTopicOfDay } from "@/components/landing/topic-of-day";
 import { LandingFinalCTA } from "@/components/landing/final-cta";
 import { LandingFooter } from "@/components/landing/footer";
 
@@ -18,6 +19,7 @@ export default function Home() {
       <LandingHow />
       <LandingCompass />
       <LandingDebate />
+      <LandingTopicOfDay />
       <LandingFinalCTA />
       <LandingFooter />
     </main>
