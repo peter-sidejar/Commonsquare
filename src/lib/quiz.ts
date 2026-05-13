@@ -1,4 +1,4 @@
-// Quiz content + scoring. 20 questions split 7/7/6 across Economic / Social /
+// Quiz content + scoring. 22 questions split 8/7/7 across Economic / Social /
 // Governance. Scoring: per-question contribution = (likert - 2) * dir →
 // range -2..+2. Axis sum → normalized to 0..100 against per-axis max →
 // snap to nearest ARCH_REF point.
@@ -20,9 +20,9 @@ export interface Question {
 // instruments. Source citations per question are below. Plain-language tone
 // preserved; no "should we do more/less than today" framing; no proper
 // nouns. Keying balance preserved:
-//   Economic   — 7 (3 positive [+], 4 negative [-])
+//   Economic   — 8 (4 positive [+], 4 negative [-])
 //   Social     — 7 (4 positive [+], 3 negative [-])
-//   Governance — 6 (3 positive [+], 3 negative [-])
+//   Governance — 7 (3 positive [+], 4 negative [-])
 //
 // Primary sources:
 //   • Pew Research Center, "Beyond Red vs. Blue: The 2021 Political Typology"
@@ -40,9 +40,20 @@ export interface Question {
 // Each axis was checked for discriminator coverage between adjacent
 // archetypes (e.g. Working Populist vs. Constitutional Conservative on
 // Economic; Establishment Conservative vs. Constitutional Conservative on
-// Governance; Traditional Democrat vs. Progressive on Social). Known gaps
-// for a future pass: no foreign-policy item; no welfare-safety-net item;
-// no factor analysis yet to confirm the three axes load distinctly.
+// Governance; Traditional Democrat vs. Progressive on Social).
+//
+// Known gaps for a future pass:
+//   - No factor analysis yet on the 3-axis loading. Should be run once we
+//     have N≥300 representative respondents.
+//   - The foreign-policy item (G7) cross-loads with the Social axis
+//     (national sovereignty vs. cosmopolitanism); we slot it on Governance
+//     because the institutional-trust frame (international cooperation vs.
+//     self-reliance) is the cleaner mapping.
+//   - Social axis collapses several distinct moral-psychology strands.
+//     A respondent who is progressive on race but traditional on family
+//     structure (common pattern among older Black religious Democrats)
+//     may snap to a slightly-off archetype. This is the structural cost
+//     of the 3-axis model and is not fixable with question selection.
 export const QUESTIONS: Question[] = [
   // ECONOMIC (Community Investment ←low | high→ Free Market) — 7 questions
   // E1 [-] Pew typology populist-vs-establishment item
@@ -60,6 +71,9 @@ export const QUESTIONS: Question[] = [
   { axis: "e", dir: +1, text: "When government tries to fix problems, it usually creates more problems than it solves." },
   // E7 [-] Adapted from Pew labor-unions-favorable item
   { axis: "e", dir: -1, text: "Workers would be better off if more of them belonged to unions." },
+  // E8 [+] Pew welfare-deservingness item, long-running since 1994
+  //        (separates Working Populist from Progressive Populist)
+  { axis: "e", dir: +1, text: "Poor people in this country have it easy because they can get government benefits without doing much in return." },
 
   // SOCIAL (Traditional ←low | high→ Progressive) — 7 questions
   // S1 [-] World Values Survey Wave 7, item V154 (verbatim)
@@ -91,6 +105,11 @@ export const QUESTIONS: Question[] = [
   { axis: "g", dir: -1, text: "Most public institutions can be trusted to do what is right most of the time.", explainer: "Public institutions means things like courts, schools, health agencies, and elected governments." },
   // G6 [+] Iyer et al. (2012), MFQ Liberty foundation, lifestyle-liberty
   { axis: "g", dir: +1, text: "People should be free to make their own decisions, even when others believe those choices are wrong." },
+  // G7 [-] Pew foreign-policy battery, peace-through-diplomacy paired item.
+  //        Cross-loads slightly with Social (cosmopolitan/nationalist) but
+  //        cleanest fit is Governance: trust in international cooperation
+  //        and institutions vs. self-reliant sovereignty.
+  { axis: "g", dir: -1, text: "Good diplomacy is the best way to ensure peace, not military strength." },
 ];
 
 function shuffleSeeded<T>(arr: T[], seed: number): T[] {
