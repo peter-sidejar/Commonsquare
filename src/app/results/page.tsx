@@ -11,7 +11,7 @@ import { OnboardingTopRow } from "@/components/onboarding/top-row";
 import { useOnboardingState } from "@/lib/onboarding-state";
 import { useSession } from "@/lib/use-session";
 import { scoreAnswers, pickArchetype } from "@/lib/quiz";
-import { insertProfile, isHandleAvailable } from "@/lib/profile";
+import { fetchMyProfile, insertProfile } from "@/lib/profile";
 
 type AxisRow = {
   label: string;
@@ -160,13 +160,12 @@ export default function ResultsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Gate access.
+  // Quiz-first flow: anyone can land on /results as long as they have a
+  // complete answer set in localStorage. If not, send them back to /quiz.
   useEffect(() => {
-    if (loading || !hydrated) return;
-    if (!session) router.replace("/signup");
-    else if (!state.handle) router.replace("/username");
-    else if (state.answers.some((a) => a == null)) router.replace("/quiz");
-  }, [loading, hydrated, session, state.handle, state.answers, router]);
+    if (!hydrated) return;
+    if (state.answers.some((a) => a == null)) router.replace("/quiz");
+  }, [hydrated, state.answers, router]);
 
   const axes = useMemo(() => scoreAnswers(state.answers), [state.answers]);
   const archetype = useMemo(() => pickArchetype(axes), [axes]);
@@ -181,33 +180,40 @@ export default function ResultsPage() {
     setState({ ...state, showOnProfile: v });
   }
 
-  async function lockIn() {
-    if (!session?.user) return;
+  async function continueFunnel() {
+    // Persist privacy choice into localStorage so the next step picks it up.
+    setState({ ...state, showOnProfile });
+
+    // Anonymous: head to signup. Quiz answers stay in localStorage and get
+    // converted into a profile row after the user claims a handle.
+    if (!session?.user) {
+      router.push("/signup");
+      return;
+    }
+
     setError(null);
     setSubmitting(true);
     try {
-      // Final guard: someone could have claimed this handle while the
-      // user was taking the quiz. Re-check before we INSERT.
-      const stillAvailable = await isHandleAvailable(state.handle);
-      if (!stillAvailable) {
-        setError(
-          `Looks like @${state.handle} just got claimed. Pick another handle?`,
-        );
-        setSubmitting(false);
-        return;
+      // Authenticated path forks on whether a profile already exists:
+      //   - exists  → retake. Upsert with the existing handle, head to lounge.
+      //   - missing → fresh user who happened to be logged in. Go claim handle.
+      const existing = await fetchMyProfile(session.user.id);
+      if (existing) {
+        await insertProfile({
+          userId: session.user.id,
+          email: session.user.email ?? existing.email,
+          handle: existing.handle,
+          axisE: axes.e,
+          axisS: axes.s,
+          axisG: axes.g,
+          archetypeId: archetype.id,
+          showOnProfile,
+        });
+        setState({ ...state, handle: existing.handle, step: "locked" });
+        router.push("/lounge");
+      } else {
+        router.push("/username");
       }
-      await insertProfile({
-        userId: session.user.id,
-        email: session.user.email ?? "",
-        handle: state.handle,
-        axisE: axes.e,
-        axisS: axes.s,
-        axisG: axes.g,
-        archetypeId: archetype.id,
-        showOnProfile,
-      });
-      setState({ ...state, showOnProfile, step: "locked" });
-      router.push("/done");
     } catch (err) {
       console.error(err);
       setError(
@@ -219,7 +225,13 @@ export default function ResultsPage() {
     }
   }
 
-  if (loading || !hydrated || !session) return null;
+  if (loading || !hydrated) return null;
+
+  const ctaLabel = submitting
+    ? "Saving…"
+    : !session
+      ? "Save my archetype →"
+      : "Continue →";
 
   const rows: AxisRow[] = [
     {
@@ -247,7 +259,7 @@ export default function ResultsPage() {
 
   return (
     <main className="min-h-screen pb-32 md:pb-0" style={{ background: CS.paper }}>
-      <OnboardingTopRow step="Step 3 of 4" backHref="/quiz" />
+      <OnboardingTopRow step="Your compass" backHref="/quiz" />
 
       <section className="mx-auto w-full max-w-[1080px] px-6 pt-10 md:px-10 md:pt-14">
         <CSBadge dot>Your compass · just for you</CSBadge>
@@ -260,7 +272,7 @@ export default function ResultsPage() {
             textTransform: "uppercase",
           }}
         >
-          @{state.handle}, you came out as a
+          {state.handle ? `@${state.handle}, ` : ""}you came out as a
         </p>
         <h1
           className="font-sans"
@@ -352,10 +364,10 @@ export default function ResultsPage() {
           <CSButton
             variant="primary"
             size="lg"
-            onClick={lockIn}
+            onClick={continueFunnel}
             disabled={submitting}
           >
-            {submitting ? "Saving…" : "Lock in my profile →"}
+            {ctaLabel}
           </CSButton>
         </div>
         {error ? (
@@ -385,10 +397,10 @@ export default function ResultsPage() {
         <CSButton
           variant="primary"
           size="lg"
-          onClick={lockIn}
+          onClick={continueFunnel}
           disabled={submitting}
         >
-          {submitting ? "Saving…" : "Lock in my profile →"}
+          {ctaLabel}
         </CSButton>
         {error ? (
           <p

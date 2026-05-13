@@ -37,7 +37,7 @@ export function LandingNav() {
           </a>
         ))}
       </div>
-      <Link href="/signup">
+      <Link href="/quiz">
         <CSButton size="sm" variant="ink">
           {CSCopy.nav.cta}
         </CSButton>

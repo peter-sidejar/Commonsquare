@@ -26,16 +26,18 @@ export default function AuthCallbackPage() {
         const profile = await fetchMyProfile(userId);
         if (cancelled) return;
         if (profile) {
+          // Returning user — straight to the lounge.
           router.replace("/lounge");
           return;
         }
-        // No profile yet — resume the funnel where the user left off.
+        // Quiz-first flow: if they finished the quiz before signing up,
+        // their answers are in localStorage. Send them to /username to
+        // claim a handle (which writes the profile row). Otherwise the
+        // quiz hasn't been taken yet, so route them there.
         const state = loadState();
         const allAnswered =
-          state && state.answers.every((a) => a !== null) && state.handle;
-        if (allAnswered) router.replace("/results");
-        else if (state && state.handle) router.replace("/quiz");
-        else router.replace("/username");
+          state && state.answers.every((a) => a !== null);
+        router.replace(allAnswered ? "/username" : "/quiz");
       } catch (err) {
         console.error(err);
         if (!cancelled)

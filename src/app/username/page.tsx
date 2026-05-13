@@ -8,8 +8,9 @@ import { CSBadge } from "@/components/cs/cs-badge";
 import { OnboardingTopRow } from "@/components/onboarding/top-row";
 import { useOnboardingState } from "@/lib/onboarding-state";
 import { useSession } from "@/lib/use-session";
-import { isHandleAvailable } from "@/lib/profile";
+import { insertProfile, isHandleAvailable } from "@/lib/profile";
 import { checkHandle } from "@/lib/handle-validation";
+import { scoreAnswers, pickArchetype } from "@/lib/quiz";
 
 const RX = /^[a-z0-9._]{3,18}$/;
 const SUGGESTIONS = [
@@ -35,11 +36,21 @@ export default function UsernamePage() {
   const { state, setState, hydrated } = useOnboardingState();
   const [handle, setHandle] = useState("");
   const [status, setStatus] = useState<Status>("idle");
+  const [submitting, setSubmitting] = useState(false);
+  const [claimError, setClaimError] = useState<string | null>(null);
 
-  // Gate: require auth.
+  // Gate: require auth AND a completed quiz (quiz-first flow). If the user
+  // somehow lands here without either, bounce them to the right place.
   useEffect(() => {
-    if (!loading && !session) router.replace("/signup");
-  }, [loading, session, router]);
+    if (loading || !hydrated) return;
+    if (!session) {
+      router.replace("/signup");
+      return;
+    }
+    if (state.answers.some((a) => a == null)) {
+      router.replace("/quiz");
+    }
+  }, [loading, hydrated, session, state.answers, router]);
 
   // Rehydrate handle from saved state on first paint.
   useEffect(() => {
@@ -102,13 +113,55 @@ export default function UsernamePage() {
     }
   }
 
-  function claim() {
+  async function claim() {
     // Defense in depth: re-validate regex + cleanliness on submit. canSubmit
     // can briefly be true after onChange but before status settles, so don't
     // trust it alone. The DB also has a CHECK constraint as a final guard.
     if (!canSubmit || !RX.test(handle) || !checkHandle(handle).ok) return;
-    setState({ ...state, handle, step: "quiz" });
-    router.push("/quiz");
+    if (!session?.user) return;
+    if (state.answers.some((a) => a == null)) {
+      router.replace("/quiz");
+      return;
+    }
+
+    setSubmitting(true);
+    setClaimError(null);
+    try {
+      // Race guard: someone could grab this handle between the debounce
+      // resolve and the click. Re-check before INSERT.
+      const stillAvailable = await isHandleAvailable(handle);
+      if (!stillAvailable) {
+        setStatus("taken");
+        setClaimError(
+          `@${handle} was just claimed. Try a different handle.`,
+        );
+        setSubmitting(false);
+        return;
+      }
+
+      const axes = scoreAnswers(state.answers);
+      const archetype = pickArchetype(axes);
+      await insertProfile({
+        userId: session.user.id,
+        email: session.user.email ?? "",
+        handle,
+        axisE: axes.e,
+        axisS: axes.s,
+        axisG: axes.g,
+        archetypeId: archetype.id,
+        showOnProfile: state.showOnProfile,
+      });
+      setState({ ...state, handle, step: "locked" });
+      router.push("/done");
+    } catch (err) {
+      console.error(err);
+      setClaimError(
+        err instanceof Error
+          ? err.message
+          : "Couldn't save your profile. Try again in a moment.",
+      );
+      setSubmitting(false);
+    }
   }
 
   const rightLabel = useMemo(() => {
@@ -131,7 +184,7 @@ export default function UsernamePage() {
 
   return (
     <main className="min-h-screen" style={{ background: CS.paper }}>
-      <OnboardingTopRow step="Step 2 of 4" backHref="/signup" />
+      <OnboardingTopRow step="Claim your handle" />
       <section className="mx-auto w-full max-w-[640px] px-6 pb-16 pt-10 md:px-0 md:pt-16">
         <CSBadge dot>Step 2 · Claim your handle</CSBadge>
         <h1
@@ -293,10 +346,14 @@ export default function UsernamePage() {
           <CSButton
             variant="primary"
             size="lg"
-            disabled={!canSubmit}
+            disabled={!canSubmit || submitting}
             onClick={claim}
           >
-            {handle ? `Claim @${handle}` : "Claim your handle"} →
+            {submitting
+              ? "Saving…"
+              : handle
+                ? `Claim @${handle} →`
+                : "Claim your handle →"}
           </CSButton>
           <span
             className="font-sans"
@@ -305,6 +362,22 @@ export default function UsernamePage() {
             You can change your display name later. Your handle is forever.
           </span>
         </div>
+        {claimError ? (
+          <p
+            className="font-sans mt-4"
+            style={{
+              margin: "16px 0 0",
+              padding: "10px 12px",
+              borderRadius: 10,
+              background: "rgba(26,24,20,0.06)",
+              fontSize: 13,
+              lineHeight: 1.55,
+              color: CS.ink,
+            }}
+          >
+            {claimError}
+          </p>
+        ) : null}
       </section>
     </main>
   );

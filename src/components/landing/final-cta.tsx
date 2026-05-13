@@ -36,7 +36,7 @@ export function LandingFinalCTA() {
       >
         {CSCopy.finalCta.sub}
       </p>
-      <Link href="/signup">
+      <Link href="/quiz">
         <CSButton variant="primary" size="lg">
           {CSCopy.finalCta.cta} →
         </CSButton>

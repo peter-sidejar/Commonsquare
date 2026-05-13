@@ -39,7 +39,7 @@ export function LandingHero() {
         {CSCopy.hero.sub}
       </p>
       <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
-        <Link href="/signup">
+        <Link href="/quiz">
           <CSButton variant="primary" size="lg">
             {CSCopy.hero.cta} →
           </CSButton>

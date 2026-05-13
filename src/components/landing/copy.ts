@@ -3,14 +3,14 @@
 
 export const CSCopy = {
   brand: "CommonSquare",
-  nav: { cta: "Join the Waitlist" },
+  nav: { cta: "Take the Compass" },
   hero: {
     badge: "The square for ideas is opening",
     h1a: "Debate ideas.",
     h1b: "Not political parties.",
     sub: "A competitive debate platform where ideas — not parties — climb the ladder. Watch the best arguers make their case, vote on who won, and step into the square yourself.",
-    cta: "Claim Your Spot",
-    support: "Free to join. Watch, vote, or debate — your call.",
+    cta: "Take the Compass",
+    support: "2 minutes. 30 questions. No sign-up to find out where you stand.",
   },
   why: {
     eyebrow: "Why CommonSquare",
@@ -88,8 +88,8 @@ export const CSCopy = {
   finalCta: {
     title: "haven't happened yet.",
     pre: "The best debates",
-    sub: "Reserve your handle. Take the compass quiz. Be in the room when the square opens.",
-    cta: "Claim Your Spot",
+    sub: "Take the 2-minute compass. See where you stand. Then claim your handle when the square opens.",
+    cta: "Take the Compass",
   },
   footer: {
     tag: "Debate ideas. Not political parties.",

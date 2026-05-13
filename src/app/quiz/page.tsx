@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { CS } from "@/lib/cs";
 import { CSMark } from "@/components/cs/cs-mark";
 import { useOnboardingState } from "@/lib/onboarding-state";
-import { useSession } from "@/lib/use-session";
 import {
   QUIZ_ORDER,
   LIKERT,
@@ -34,17 +33,12 @@ const AUTO_ADVANCE_MS = 220;
 
 export default function QuizPage() {
   const router = useRouter();
-  const { session, loading } = useSession();
   const { state, setState, hydrated } = useOnboardingState();
   const [i, setI] = useState(0);
   const [transitioning, setTransitioning] = useState(false);
 
-  // Gate access: must be signed in + have claimed a handle.
-  useEffect(() => {
-    if (loading || !hydrated) return;
-    if (!session) router.replace("/signup");
-    else if (!state.handle) router.replace("/username");
-  }, [loading, hydrated, session, state.handle, router]);
+  // Quiz is open to anyone — no auth gate. The answers live in localStorage
+  // and are converted into a profile row at /username after sign-in.
 
   // Resume at last unanswered (or last index touched).
   useEffect(() => {
@@ -113,7 +107,7 @@ export default function QuizPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [i, state.answers, transitioning]);
 
-  if (loading || !hydrated || !session || !q || !axis) return null;
+  if (!hydrated || !q || !axis) return null;
 
   const progressPct = (answeredCount / QUIZ_ORDER.length) * 100;
 

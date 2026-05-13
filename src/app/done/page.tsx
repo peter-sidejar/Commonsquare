@@ -186,7 +186,7 @@ export default function DonePage() {
 
   return (
     <main className="min-h-screen" style={{ background: CS.paper }}>
-      <OnboardingTopRow step="Step 4 of 4 · Locked in" />
+      <OnboardingTopRow step="Locked in" />
 
       <section className="mx-auto w-full max-w-[640px] px-6 pb-16 pt-10 md:px-0 md:pt-16 md:text-center">
         <CSBadge dot>Profile · Locked in</CSBadge>
