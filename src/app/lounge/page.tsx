@@ -236,7 +236,7 @@ export default function LoungePage() {
     if (!hydrated) return;
     if (!state.email) router.replace("/signup");
     else if (!state.handle) router.replace("/username");
-    else if (state.answers.every((a) => a == null)) router.replace("/quiz");
+    else if (state.answers.some((a) => a == null)) router.replace("/quiz");
   }, [hydrated, state.email, state.handle, state.answers, router]);
 
   const axes = useMemo(() => scoreAnswers(state.answers), [state.answers]);
@@ -568,7 +568,7 @@ export default function LoungePage() {
                       // Allow retake — clear answers, send back to quiz.
                       setState({
                         ...state,
-                        answers: Array(30).fill(null),
+                        answers: Array(state.answers.length).fill(null),
                         quizIndex: 0,
                         step: "quiz",
                       });

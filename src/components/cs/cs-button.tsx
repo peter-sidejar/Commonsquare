@@ -8,7 +8,6 @@ interface CSButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;
   variant?: Variant;
   size?: Size;
-  asChildPaddingless?: boolean;
 }
 
 export const CSButton = forwardRef<HTMLButtonElement, CSButtonProps>(

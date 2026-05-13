@@ -24,7 +24,15 @@ export function CSEyebrow({ label, num, centered = false }: CSEyebrowProps) {
     >
       {num ? <span style={{ color: CS.violet }}>{num}</span> : null}
       {num ? (
-        <span style={{ width: 16, height: 1, background: CS.rule2 }} />
+        <span
+          aria-hidden
+          style={{
+            display: "inline-block",
+            width: 16,
+            height: 1,
+            background: CS.rule2,
+          }}
+        />
       ) : null}
       <span style={{ color: CS.ink }}>{label}</span>
     </div>

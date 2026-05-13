@@ -115,5 +115,12 @@ export function pickArchetype(axes: AxisScores): Archetype {
       best = k;
     }
   });
-  return CSArchetypes.find((a) => a.id === best)!;
+  const found = CSArchetypes.find((a) => a.id === best);
+  if (!found) {
+    // Should be unreachable — best is always a key of ARCH_REF, and every
+    // ARCH_REF key has a matching entry in CSArchetypes. Fall back to "mm"
+    // (Modern Moderate) so the UI never crashes.
+    return CSArchetypes.find((a) => a.id === "mm") ?? CSArchetypes[0];
+  }
+  return found;
 }

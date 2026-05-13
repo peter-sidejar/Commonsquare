@@ -7,6 +7,13 @@ interface CSAvatarProps {
 }
 
 export function CSAvatar({ initials = "MK", size = 36, tone = "ink" }: CSAvatarProps) {
+  // Normalize: trim, collapse whitespace, uppercase, clamp to 2 chars.
+  const safeInitials =
+    (initials || "")
+      .trim()
+      .replace(/\s+/g, "")
+      .toUpperCase()
+      .slice(0, 2) || "MK";
   const bg = tone === "ink" ? CS.ink : tone === "violet" ? CS.violet : CS.paper3;
   const fg = tone === "ink" || tone === "violet" ? CS.paper : CS.ink;
   return (
@@ -27,7 +34,7 @@ export function CSAvatar({ initials = "MK", size = 36, tone = "ink" }: CSAvatarP
         flex: "0 0 auto",
       }}
     >
-      {initials}
+      {safeInitials}
     </div>
   );
 }

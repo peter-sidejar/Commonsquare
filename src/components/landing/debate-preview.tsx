@@ -72,10 +72,15 @@ function DebateCard() {
       <div className="grid grid-cols-1 md:grid-cols-2">
         {(["a", "b"] as const).map((side, i) => {
           const d = CSCopy.debate[side];
-          const initials = d.name
-            .split(" ")
-            .map((w) => w[0])
-            .join("");
+          const initials =
+            (d.name || "")
+              .trim()
+              .split(/\s+/)
+              .map((w) => w[0])
+              .filter(Boolean)
+              .join("")
+              .toUpperCase()
+              .slice(0, 2) || "?";
           return (
             <div
               key={side}
