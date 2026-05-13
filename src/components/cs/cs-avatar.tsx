@@ -1,0 +1,40 @@
+import { CS } from "@/lib/cs";
+
+interface CSAvatarProps {
+  initials?: string;
+  size?: number;
+  tone?: "ink" | "violet" | "paper";
+}
+
+export function CSAvatar({ initials = "MK", size = 36, tone = "ink" }: CSAvatarProps) {
+  // Normalize: trim, collapse whitespace, uppercase, clamp to 2 chars.
+  const safeInitials =
+    (initials || "")
+      .trim()
+      .replace(/\s+/g, "")
+      .toUpperCase()
+      .slice(0, 2) || "MK";
+  const bg = tone === "ink" ? CS.ink : tone === "violet" ? CS.violet : CS.paper3;
+  const fg = tone === "ink" || tone === "violet" ? CS.paper : CS.ink;
+  return (
+    <div
+      className="font-sans"
+      style={{
+        width: size,
+        height: size,
+        borderRadius: 999,
+        background: bg,
+        color: fg,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontWeight: 500,
+        fontSize: size * 0.4,
+        letterSpacing: "-0.02em",
+        flex: "0 0 auto",
+      }}
+    >
+      {safeInitials}
+    </div>
+  );
+}
