@@ -1,27 +1,25 @@
-import { Header } from "@/components/marketing/header";
-import { Footer } from "@/components/marketing/footer";
-import { HeroSection } from "@/components/landing/hero-section";
-import { WhySection } from "@/components/landing/problem-section";
-import { InsightBridgeSection } from "@/components/landing/insight-bridge-section";
-import { HowItWorksSection } from "@/components/landing/solution-section";
-import { CompassPreviewSection } from "@/components/landing/compass-preview-section";
-import { DebatePreviewSection } from "@/components/landing/debate-preview-section";
-import { CTASection } from "@/components/landing/cta-section";
+import { LandingNav } from "@/components/landing/nav";
+import { LandingHero } from "@/components/landing/hero";
+import { LandingWhy } from "@/components/landing/why";
+import { LandingBridge } from "@/components/landing/bridge";
+import { LandingHow } from "@/components/landing/how";
+import { LandingCompass } from "@/components/landing/compass-section";
+import { LandingDebate } from "@/components/landing/debate-preview";
+import { LandingFinalCTA } from "@/components/landing/final-cta";
+import { LandingFooter } from "@/components/landing/footer";
 
 export default function Home() {
   return (
-    <div className="flex min-h-screen flex-col">
-      <Header />
-      <main className="flex-1">
-        <HeroSection />
-        <WhySection />
-        <InsightBridgeSection />
-        <HowItWorksSection />
-        <CompassPreviewSection />
-        <DebatePreviewSection />
-        <CTASection />
-      </main>
-      <Footer />
-    </div>
+    <main className="bg-paper text-ink">
+      <LandingNav />
+      <LandingHero />
+      <LandingWhy />
+      <LandingBridge />
+      <LandingHow />
+      <LandingCompass />
+      <LandingDebate />
+      <LandingFinalCTA />
+      <LandingFooter />
+    </main>
   );
 }
