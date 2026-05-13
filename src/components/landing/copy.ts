@@ -10,7 +10,7 @@ export const CSCopy = {
     h1b: "Not political parties.",
     sub: "A competitive debate platform where ideas — not parties — climb the ladder. Watch the best arguers make their case, vote on who won, and step into the square yourself.",
     cta: "Take the Compass",
-    support: "2 minutes. 30 questions. No sign-up to find out where you stand.",
+    support: "2 minutes. 20 questions. No sign-up to find out where you stand.",
   },
   why: {
     eyebrow: "Why CommonSquare",
@@ -46,7 +46,7 @@ export const CSCopy = {
         n: "02",
         title: "Discover Your Compass",
         time: "2 minutes",
-        body: "30 questions, three axes. Your answers stay private — only the archetype is yours to show.",
+        body: "20 questions, three axes. Your answers stay private — only the archetype is yours to show.",
       },
       {
         n: "03",
