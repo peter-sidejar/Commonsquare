@@ -574,44 +574,51 @@ export function TopicComments({
           >
             Discussion
           </h3>
-          <span
-            className="font-mono"
-            style={{
-              fontSize: 11,
-              color: CS.mute,
-              letterSpacing: "0.12em",
-              textTransform: "uppercase",
-            }}
-          >
-            {total} {total === 1 ? "comment" : "comments"}
-          </span>
-        </div>
-        <div className="flex items-center gap-1" role="tablist">
-          {(["top", "new", "controversial"] as CommentSort[]).map((s) => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => setSort(s)}
-              role="tab"
-              aria-selected={sort === s}
+          {total > 0 ? (
+            <span
               className="font-mono"
               style={{
-                padding: "6px 12px",
-                borderRadius: 999,
-                background: sort === s ? CS.ink : "transparent",
-                color: sort === s ? CS.paper : CS.mute,
-                border: `1px solid ${sort === s ? CS.ink : CS.rule2}`,
-                fontSize: 10,
-                letterSpacing: "0.14em",
+                fontSize: 11,
+                color: CS.mute,
+                letterSpacing: "0.12em",
                 textTransform: "uppercase",
-                cursor: "pointer",
-                opacity: refetching && sort !== s ? 0.5 : 1,
               }}
             >
-              {s}
-            </button>
-          ))}
+              {total} {total === 1 ? "comment" : "comments"}
+            </span>
+          ) : null}
         </div>
+        {/* Sort tabs only show when there's something to sort. Otherwise
+            they read as categories the user has to pick from when posting,
+            which is a real UX trap on a fresh topic page. */}
+        {total > 1 ? (
+          <div className="flex items-center gap-1" role="tablist">
+            {(["top", "new", "controversial"] as CommentSort[]).map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setSort(s)}
+                role="tab"
+                aria-selected={sort === s}
+                className="font-mono"
+                style={{
+                  padding: "6px 12px",
+                  borderRadius: 999,
+                  background: sort === s ? CS.ink : "transparent",
+                  color: sort === s ? CS.paper : CS.mute,
+                  border: `1px solid ${sort === s ? CS.ink : CS.rule2}`,
+                  fontSize: 10,
+                  letterSpacing: "0.14em",
+                  textTransform: "uppercase",
+                  cursor: "pointer",
+                  opacity: refetching && sort !== s ? 0.5 : 1,
+                }}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        ) : null}
       </div>
 
       {/* Composer */}
