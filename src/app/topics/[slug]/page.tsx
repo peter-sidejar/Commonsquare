@@ -64,7 +64,12 @@ export async function generateMetadata({
   }
   const description = truncate(topic.background.replace(/\s+/g, " "), 200);
   const url = `https://commonsquare.app/topics/${topic.slug}`;
-  const ogImage = topic.og_image_url ?? undefined;
+  // Note: the OG image is auto-attached by the file-based
+  // `opengraph-image.tsx` next to this page. If `topic.og_image_url` is
+  // set we override with a custom URL; otherwise the dynamic image is
+  // used. The card type is always summary_large_image since both paths
+  // produce a 1200×630 image.
+  const customImage = topic.og_image_url ?? undefined;
   return {
     title: `${topic.debate_question} · CommonSquare`,
     description,
@@ -77,13 +82,13 @@ export async function generateMetadata({
       siteName: "CommonSquare",
       publishedTime: topic.published_at,
       tags: topic.tags,
-      ...(ogImage ? { images: [{ url: ogImage }] } : {}),
+      ...(customImage ? { images: [{ url: customImage }] } : {}),
     },
     twitter: {
-      card: ogImage ? "summary_large_image" : "summary",
+      card: "summary_large_image",
       title: topic.title,
       description,
-      ...(ogImage ? { images: [ogImage] } : {}),
+      ...(customImage ? { images: [customImage] } : {}),
     },
     keywords: topic.tags,
   };
