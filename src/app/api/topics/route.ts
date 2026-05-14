@@ -2,10 +2,44 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
 import { getServiceRoleClient } from "@/lib/supabase-server";
+import { createAnonServerClient } from "@/lib/supabase-anon-server";
 import { isAdminEmail, isValidIngestToken } from "@/lib/admin";
 import type { Database } from "@/lib/database.types";
 
 export const runtime = "nodejs";
+
+// Public GET — returns recent published topics. Used by the n8n daily flow
+// to feed the AI a "don't re-pick these" list. No auth required since
+// published topics are already public via the page surface.
+export async function GET(req: Request) {
+  const url = new URL(req.url);
+  const rawRecent = url.searchParams.get("recent");
+  const requested = rawRecent ? parseInt(rawRecent, 10) : 30;
+  const limit = Number.isFinite(requested)
+    ? Math.max(1, Math.min(100, requested))
+    : 30;
+
+  const sb = createAnonServerClient();
+  const { data, error } = await sb
+    .from("topics")
+    .select("slug,title,debate_question,published_at,tags,primary_axis")
+    .eq("status", "published")
+    .order("published_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+  return NextResponse.json(
+    { topics: data ?? [] },
+    {
+      // Allow Vercel + CDN to cache for 60s. Daily n8n flow doesn't care
+      // about a 1-min lag and we avoid hitting Supabase on every page load
+      // that uses this endpoint.
+      headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" },
+    },
+  );
+}
 
 const SourceSchema = z.object({
   outlet: z.string().min(1).max(120),
