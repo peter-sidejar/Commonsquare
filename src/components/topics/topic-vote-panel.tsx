@@ -253,11 +253,15 @@ export function TopicVotePanel({ topicId, question, initialTally }: Props) {
           </div>
         )}
 
-        {/* Vote buttons appear pre-vote (anon + signed-in-no-vote). */}
+        {/* Vote buttons appear pre-vote (anon + signed-in-no-vote).
+            Both buttons are visually identical — same variant, same
+            weight, same fill — so neither stance gets a UX nudge.
+            Asymmetry is reserved for the post-vote state where we
+            highlight the side you chose. */}
         {showVoteButtons ? (
           <div className="flex flex-col gap-3 md:flex-row">
             <CSButton
-              variant="ink"
+              variant="ghost"
               size="lg"
               onClick={() => onVote("yes")}
               disabled={submitting}
