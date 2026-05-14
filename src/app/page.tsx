@@ -14,12 +14,12 @@ export default function Home() {
     <main className="bg-paper text-ink">
       <LandingNav />
       <LandingHero />
+      <LandingTopicOfDay />
       <LandingWhy />
       <LandingBridge />
       <LandingHow />
       <LandingCompass />
       <LandingDebate />
-      <LandingTopicOfDay />
       <LandingFinalCTA />
       <LandingFooter />
     </main>

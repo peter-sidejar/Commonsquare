@@ -22,6 +22,17 @@ export function LandingNav() {
         </span>
       </Link>
       <div className="hidden items-center gap-6 md:flex">
+        <Link
+          href="/topics"
+          className="font-sans"
+          style={{
+            fontSize: 14,
+            color: CS.ink,
+            letterSpacing: "-0.01em",
+          }}
+        >
+          Topics
+        </Link>
         {["Why", "Compass", "Square"].map((l) => (
           <a
             key={l}
